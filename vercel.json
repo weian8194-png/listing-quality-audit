@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/amazon.js": {
+      "maxDuration": 20
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    }
+  ]
+}

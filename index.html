@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Amazon Listing LQI CDQ Audit</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Listing Quality Intelligence</p>
+          <h1>Amazon LQI 与 CDQ 审计台</h1>
+        </div>
+        <div class="status-strip" aria-live="polite">
+          <span class="status-dot"></span>
+          <span id="asinStatus">等待 ASIN</span>
+        </div>
+      </header>
+
+      <section class="audit-layout">
+        <form class="panel control-panel" id="auditForm">
+          <div class="section-head">
+            <h2>ASIN 与页面数据</h2>
+            <button class="ghost-button compact" type="button" id="loadExample" title="填入样例数据">
+              <span aria-hidden="true">↻</span>
+              样例
+            </button>
+          </div>
+
+          <div class="field-row">
+            <label for="asin">ASIN</label>
+            <div class="inline-control">
+              <input id="asin" name="asin" maxlength="10" autocomplete="off" placeholder="B0DQKPLXMB">
+              <a class="icon-button" id="amazonLink" href="#" target="_blank" rel="noreferrer" title="打开 Amazon DP 页面" aria-label="打开 Amazon DP 页面">↗</a>
+              <button class="ghost-button compact fetch-button" type="button" id="fetchAmazon" title="读取 Amazon 页面信息">
+                <span aria-hidden="true">⌕</span>
+                读取
+              </button>
+            </div>
+            <p class="helper-text" id="fetchHint">自动读取需要通过本地服务运行，直接打开 HTML 时请手动粘贴页面内容。</p>
+          </div>
+
+          <div class="field-grid">
+            <div class="field-row">
+              <label for="category">品类</label>
+              <select id="category" name="category">
+                <option value="juicer">榨汁机</option>
+                <option value="iceMaker">制冰机</option>
+                <option value="blender">搅拌机</option>
+                <option value="airFryer">空气炸锅</option>
+                <option value="general">厨房电器</option>
+              </select>
+            </div>
+            <div class="field-row">
+              <label for="brand">品牌</label>
+              <input id="brand" name="brand" placeholder="EUHOMY">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <label for="title">标题</label>
+            <textarea id="title" name="title" rows="3" placeholder="粘贴 Amazon 标题"></textarea>
+          </div>
+
+          <div class="field-row">
+            <label for="bullets">五点描述</label>
+            <textarea id="bullets" name="bullets" rows="7" placeholder="每条五点独立一行"></textarea>
+          </div>
+
+          <div class="field-row">
+            <label for="attributes">后台属性与参数</label>
+            <textarea id="attributes" name="attributes" rows="6" placeholder="功率 350W&#10;口径 5.8 Inch&#10;噪音 60 dB&#10;材质 BPA Free Tritan"></textarea>
+          </div>
+
+          <div class="field-row">
+            <label for="mediaCopy">A+ 页面与图片文案</label>
+            <textarea id="mediaCopy" name="mediaCopy" rows="5" placeholder="粘贴 A+ 模块、图片卖点、视频脚本或竞品差异点"></textarea>
+          </div>
+
+          <div class="switch-row">
+            <label class="switch">
+              <input type="checkbox" id="openAmazon" checked>
+              <span></span>
+            </label>
+            <span>审计时打开 Amazon 页面</span>
+          </div>
+
+          <div class="button-row">
+            <button class="primary-button" type="submit">
+              <span aria-hidden="true">✓</span>
+              生成审计建议
+            </button>
+            <button class="ghost-button" type="button" id="resetForm">
+              <span aria-hidden="true">×</span>
+              清空
+            </button>
+          </div>
+        </form>
+
+        <section class="panel report-panel" aria-live="polite">
+          <div class="report-toolbar">
+            <div>
+              <p class="eyebrow">Audit Output</p>
+              <h2>综合诊断报告</h2>
+            </div>
+            <div class="button-row tight">
+              <button class="ghost-button compact" id="copyReport" type="button" title="复制报告">
+                <span aria-hidden="true">⧉</span>
+                复制
+              </button>
+              <button class="ghost-button compact" id="printReport" type="button" title="打印报告">
+                <span aria-hidden="true">⌘</span>
+                打印
+              </button>
+            </div>
+          </div>
+
+          <div class="score-band">
+            <div>
+              <span class="score-label">当前质量等级</span>
+              <strong id="gradeValue">待审计</strong>
+            </div>
+            <div class="score-meter" aria-hidden="true">
+              <span id="scoreMeter"></span>
+            </div>
+            <div>
+              <span class="score-label">CDQ 完整度</span>
+              <strong id="cdqValue">0%</strong>
+            </div>
+          </div>
+
+          <article class="report-content" id="reportOutput">
+            <div class="empty-state">
+              <div class="empty-mark">LQI</div>
+              <p>输入 ASIN 与 Listing 内容后生成审计结果。</p>
+            </div>
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <template id="reportTemplate">
+      <section class="report-section" data-section="diagnosis">
+        <h3>1. 综合诊断报告</h3>
+        <div class="diagnostic-grid" data-slot="diagnostics"></div>
+      </section>
+
+      <section class="report-section" data-section="action">
+        <h3>2. 核心优化方案</h3>
+        <div class="copy-block">
+          <span>CDQ 规范化标题</span>
+          <p data-slot="optimizedTitle"></p>
+        </div>
+        <div class="copy-block">
+          <span>CDQ & LQI 双效五点</span>
+          <ol data-slot="bullets"></ol>
+        </div>
+        <div class="attribute-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>后台属性字段</th>
+                <th>建议值</th>
+                <th>审计动作</th>
+              </tr>
+            </thead>
+            <tbody data-slot="attributes"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="report-section" data-section="media">
+        <h3>3. A+ 页面与图片文案建议</h3>
+        <ul class="recommendation-list" data-slot="media"></ul>
+      </section>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>

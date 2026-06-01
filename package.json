@@ -1,0 +1,12 @@
+{
+  "name": "amazon-listing-lqi-cdq-audit",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check app.js && node --check amazon-reader.js && node --check server.js && node --check api/amazon.js"
+  }
+}
