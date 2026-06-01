@@ -1,7 +1,8 @@
 {
   "functions": {
     "api/amazon.js": {
-      "maxDuration": 20
+      "maxDuration": 20,
+      "includeFiles": "amazon-reader.js"
     }
   },
   "rewrites": [
