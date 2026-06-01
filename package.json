@@ -6,7 +6,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "start": "node server.js",
-    "check": "node --check app.js && node --check amazon-reader.js && node --check server.js && node --check api/amazon.js"
+    "dev": "node local-server.js",
+    "check": "node --check app.js && node --check amazon-reader.js && node --check local-server.js && node --check api/amazon.js"
   }
 }

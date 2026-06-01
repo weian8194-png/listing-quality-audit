@@ -49,6 +49,15 @@ function sendJson(response, status, payload) {
 }
 
 async function handleAmazon(requestUrl, response) {
+  if (requestUrl.searchParams.get("health") === "1") {
+    sendJson(response, 200, {
+      ok: true,
+      rapidApiConfigured: Boolean(process.env.RAPIDAPI_KEY || process.env.RAPIDAPI_AMAZON_KEY),
+      country: process.env.AMAZON_COUNTRY || "US"
+    });
+    return;
+  }
+
   const asin = requestUrl.searchParams.get("asin");
 
   try {

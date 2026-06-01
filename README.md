@@ -13,8 +13,10 @@ copy .env.example .env
 然后把 `.env` 里的 `RAPIDAPI_KEY` 改成你的 RapidAPI key。不要把 `.env` 提交到 GitHub。
 
 ```bash
-npm start
+npm run dev
 ```
+
+本地预览使用 `local-server.js`。Vercel 部署时只托管静态文件，并使用 `api/amazon.js` 作为后端函数；不要把本地 HTTP server 作为 Vercel 的启动入口。
 
 打开：
 
