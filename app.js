@@ -160,7 +160,7 @@ const bulletsInput = document.querySelector("#bullets");
 const attributesInput = document.querySelector("#attributes");
 const mediaInput = document.querySelector("#mediaCopy");
 const amazonLink = document.querySelector("#amazonLink");
-const fetchAmazonButton = document.querySelector("#fetchAmazon");
+const auditSubmitButton = document.querySelector("#auditSubmit");
 const fetchHint = document.querySelector("#fetchHint");
 const asinStatus = document.querySelector("#asinStatus");
 const statusStrip = document.querySelector(".status-strip");
@@ -221,8 +221,8 @@ function updateAsinState() {
 
   if (isStaticOnlyHost()) {
     fetchHint.textContent = window.location.hostname.endsWith("github.io")
-      ? "GitHub Pages 只托管静态网页，可输入 ASIN 并手动粘贴内容；自动读取需连接 Vercel 或 Render 后端。"
-      : "自动读取需要通过本地服务或公网后端运行，直接打开 HTML 时请手动粘贴页面内容。";
+      ? "GitHub Pages 没有后端 API，无法只凭 ASIN 自动审计；请使用 Vercel 部署版本。"
+      : "当前是直接打开 HTML，无法调用 API；请运行 npm run dev 后访问本地页面。";
   }
 }
 
@@ -236,10 +236,10 @@ function inferCategoryFromText(text) {
 }
 
 function setFetchLoading(isLoading) {
-  fetchAmazonButton.disabled = isLoading;
-  fetchAmazonButton.innerHTML = isLoading
+  auditSubmitButton.disabled = isLoading;
+  auditSubmitButton.innerHTML = isLoading
     ? '<span aria-hidden="true">…</span>读取中'
-    : '<span aria-hidden="true">⌕</span>只读取';
+    : '<span aria-hidden="true">✓</span>读取并审计';
 }
 
 function localizeFetchError(message) {
@@ -267,8 +267,7 @@ function formatDetails(details) {
     .join("\n");
 }
 
-async function fetchAmazonListing(options = {}) {
-  const shouldOpenAmazon = options.openAmazon === true;
+async function fetchAmazonListing() {
   const asin = sanitizeAsin(asinInput.value);
 
   if (!isValidAsin(asin)) {
@@ -281,13 +280,13 @@ async function fetchAmazonListing(options = {}) {
   if (isStaticOnlyHost()) {
     fetchHint.textContent = window.location.hostname.endsWith("github.io")
       ? "GitHub Pages 没有后端 API，不能直接读取 Amazon。请用 GitHub 连接 Vercel/Render 部署完整版本。"
-      : "当前是直接打开 HTML，自动读取不可用。请运行 npm start 后访问本地页面。";
+      : "当前是直接打开 HTML，自动读取不可用。请运行 npm run dev 后访问本地页面。";
     showToast("当前环境没有读取后端");
     return;
   }
 
   setFetchLoading(true);
-  fetchHint.textContent = "正在读取 Amazon 页面信息。若遇到验证码或限制，请使用官方 API 或手动粘贴。";
+  fetchHint.textContent = "正在通过 API 读取 Amazon Listing 数据并生成审计报告。";
 
   try {
     const response = await fetch(`/api/amazon?asin=${encodeURIComponent(asin)}`);
@@ -317,21 +316,17 @@ async function fetchAmazonListing(options = {}) {
     categoryInput.value = payload.categoryHint || inferCategoryFromText(combinedText);
 
     if (!mediaInput.value.trim()) {
-      mediaInput.value = payload.mediaNote || "Amazon 页面读取通常无法完整覆盖 A+ 图片文案，请继续补充 A+ 模块、图片文字和视频脚本。";
+      mediaInput.value = payload.mediaNote || "API 未返回完整 A+ 图片文案，报告将基于标题、五点和参数给出素材补全建议。";
     }
 
     renderReport(getFormData());
 
-    if (shouldOpenAmazon) {
-      window.open(getAmazonUrl(asin), "_blank", "noreferrer");
-    }
-
     const warning = payload.warning ? ` ${payload.warning}` : "";
     fetchHint.textContent = `已读取 ${payload.url}。${warning}`;
-    showToast("Amazon 信息已导入");
+    showToast("审计报告已生成");
     return true;
   } catch (error) {
-    fetchHint.textContent = `${localizeFetchError(error.message)}。可打开 Amazon 链接后手动粘贴，或接入 Amazon SP-API / PA-API。`;
+    fetchHint.textContent = `${localizeFetchError(error.message)}。请确认 ASIN 有效，或检查后端 API 配置与 RapidAPI 订阅状态。`;
     showToast("自动读取失败");
     return false;
   } finally {
@@ -778,7 +773,6 @@ function loadExampleData() {
 }
 
 asinInput.addEventListener("input", updateAsinState);
-fetchAmazonButton.addEventListener("click", fetchAmazonListing);
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -791,25 +785,15 @@ form.addEventListener("submit", (event) => {
     return;
   }
 
-  if (!isStaticOnlyHost()) {
-    fetchAmazonListing({
-      openAmazon: document.querySelector("#openAmazon").checked
-    });
-    return;
-  }
-
-  renderReport(data);
-  showToast("审计报告已生成");
+  fetchAmazonListing();
 });
-
-document.querySelector("#loadExample").addEventListener("click", loadExampleData);
 
 document.querySelector("#resetForm").addEventListener("click", () => {
   form.reset();
   reportOutput.innerHTML = `
     <div class="empty-state">
       <div class="empty-mark">LQI</div>
-      <p>输入 ASIN 与 Listing 内容后生成审计结果。</p>
+      <p>输入 ASIN 后生成审计结果。</p>
     </div>
   `;
   gradeValue.textContent = "待审计";

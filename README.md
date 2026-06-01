@@ -28,7 +28,7 @@ http://127.0.0.1:8787
 
 ### 方案 A：GitHub Pages
 
-可以，只用 GitHub 就能发布公开网页。这个方案适合让所有人打开网页、输入 ASIN、生成 Amazon 链接、手动粘贴 Listing 内容并生成审计报告。
+可以，只用 GitHub 就能发布公开网页。但 GitHub Pages 只能托管静态页面，不能运行 API，因此只适合作为静态演示；正式版本需要部署到 Vercel，由用户输入 ASIN 后通过 API 自动读取 Listing 数据并生成审计报告。
 
 步骤：
 

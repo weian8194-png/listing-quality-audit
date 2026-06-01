@@ -22,11 +22,7 @@
       <section class="audit-layout">
         <form class="panel control-panel" id="auditForm">
           <div class="section-head">
-            <h2>ASIN 与页面数据</h2>
-            <button class="ghost-button compact" type="button" id="loadExample" title="填入样例数据">
-              <span aria-hidden="true">↻</span>
-              样例
-            </button>
+            <h2>ASIN 审计入口</h2>
           </div>
 
           <div class="field-row">
@@ -34,14 +30,11 @@
             <div class="inline-control">
               <input id="asin" name="asin" maxlength="10" autocomplete="off" placeholder="B0DQKPLXMB">
               <a class="icon-button" id="amazonLink" href="#" target="_blank" rel="noreferrer" title="打开 Amazon DP 页面" aria-label="打开 Amazon DP 页面">↗</a>
-              <button class="ghost-button compact fetch-button" type="button" id="fetchAmazon" title="只读取 Amazon 页面信息">
-                <span aria-hidden="true">⌕</span>
-                只读取
-              </button>
             </div>
-            <p class="helper-text" id="fetchHint">自动读取需要通过本地服务运行，直接打开 HTML 时请手动粘贴页面内容。</p>
+            <p class="helper-text" id="fetchHint">输入 ASIN 后，系统会通过 API 读取 Amazon Listing 数据并生成审计报告。</p>
           </div>
 
+          <div class="api-data-fields" hidden>
           <div class="field-grid">
             <div class="field-row">
               <label for="category">品类</label>
@@ -78,17 +71,10 @@
             <label for="mediaCopy">A+ 页面与图片文案</label>
             <textarea id="mediaCopy" name="mediaCopy" rows="5" placeholder="粘贴 A+ 模块、图片卖点、视频脚本或竞品差异点"></textarea>
           </div>
-
-          <div class="switch-row">
-            <label class="switch">
-              <input type="checkbox" id="openAmazon">
-              <span></span>
-            </label>
-            <span>审计后打开 Amazon 页面</span>
           </div>
 
           <div class="button-row">
-            <button class="primary-button" type="submit">
+            <button class="primary-button" type="submit" id="auditSubmit">
               <span aria-hidden="true">✓</span>
               读取并审计
             </button>
@@ -134,7 +120,7 @@
           <article class="report-content" id="reportOutput">
             <div class="empty-state">
               <div class="empty-mark">LQI</div>
-              <p>输入 ASIN 与 Listing 内容后生成审计结果。</p>
+              <p>输入 ASIN 后生成审计结果。</p>
             </div>
           </article>
         </section>
