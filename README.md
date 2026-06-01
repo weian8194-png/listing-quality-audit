@@ -4,6 +4,14 @@
 
 ## 本地预览
 
+先配置 RapidAPI 密钥：
+
+```bash
+copy .env.example .env
+```
+
+然后把 `.env` 里的 `RAPIDAPI_KEY` 改成你的 RapidAPI key。不要把 `.env` 提交到 GitHub。
+
 ```bash
 npm start
 ```
@@ -42,6 +50,15 @@ vercel --prod
 
 部署完成后，Vercel 会给出一个公网 HTTPS 链接，任何人都可以打开并输入 ASIN。
 
+Vercel 里必须配置环境变量：
+
+```text
+RAPIDAPI_KEY=你的 RapidAPI key
+AMAZON_COUNTRY=US
+```
+
+配置位置：`Project Settings` > `Environment Variables`。保存后重新部署一次。
+
 ## 重要说明
 
-Amazon 页面可能返回验证码、机器人检查或变更页面结构，因此自动读取是“最佳努力”。如果读取失败，网站会提示用户手动粘贴 Listing 内容。若要长期稳定商用，建议后续接入 Amazon SP-API 或 Product Advertising API。
+自动读取现在优先使用 RapidAPI Real-Time Amazon Data。RapidAPI 返回的数据通常包含 `product_title`、`about_product`、`product_information`、`product_details`、图片、价格、评分等字段；A+ 图片内嵌文字和视频脚本仍建议人工复核。

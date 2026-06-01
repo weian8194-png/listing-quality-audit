@@ -1,4 +1,5 @@
 const ASIN_RE = /^[A-Z0-9]{10}$/;
+const RAPIDAPI_HOST = "real-time-amazon-data.p.rapidapi.com";
 
 class AmazonReadError extends Error {
   constructor(message, statusCode = 500, url = undefined) {
@@ -142,6 +143,136 @@ function isBlocked(html) {
   return /robot check|captcha|enter the characters you see below|sorry, we just need to make sure you're not a robot/i.test(html);
 }
 
+function unwrapRapidApiPayload(payload) {
+  if (!payload || typeof payload !== "object") return {};
+  if (payload.data && typeof payload.data === "object" && !Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload.data) && payload.data[0]) return payload.data[0];
+  return payload;
+}
+
+function firstText(...values) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function mergeDetails(...objects) {
+  const details = {};
+
+  for (const object of objects) {
+    if (!object || typeof object !== "object" || Array.isArray(object)) continue;
+    for (const [key, value] of Object.entries(object)) {
+      if (value === null || value === undefined || value === "") continue;
+      const cleanKey = cleanText(key).replace(/[:\uFF1A]+$/, "");
+      const cleanValue = Array.isArray(value) ? value.join(", ") : cleanText(String(value));
+      if (cleanKey && cleanValue && cleanKey.length <= 80 && cleanValue.length <= 240) {
+        details[cleanKey] = cleanValue;
+      }
+    }
+  }
+
+  return details;
+}
+
+function normalizeRapidApiListing(inputAsin, rawPayload) {
+  const data = unwrapRapidApiPayload(rawPayload);
+  const asin = normalizeAsin(firstText(data.asin, inputAsin));
+  const title = firstText(data.product_title, data.title, data.name);
+  const bullets = Array.isArray(data.about_product)
+    ? data.about_product.map((item) => cleanText(String(item))).filter(Boolean)
+    : [];
+  const details = mergeDetails(data.product_details, data.product_information, {
+    Brand: firstText(data.product_brand, data.brand),
+    Price: firstText(data.product_price, data.price),
+    Rating: firstText(data.product_star_rating, data.rating && String(data.rating)),
+    "Ratings Count": data.product_num_ratings ? String(data.product_num_ratings) : "",
+    Availability: firstText(data.product_availability, data.availability),
+    "Sales Volume": firstText(data.sales_volume),
+    "Best Seller": data.is_best_seller === true ? "Yes" : "",
+    "Amazon Choice": data.is_amazon_choice === true ? "Yes" : "",
+    Prime: data.is_prime === true ? "Yes" : ""
+  });
+  const brand = firstText(data.product_brand, data.brand, details.Brand, details.Manufacturer, data.product_byline);
+  const photos = Array.isArray(data.product_photos)
+    ? data.product_photos
+    : [data.product_photo].filter(Boolean);
+  const categoryPath = Array.isArray(data.category_path)
+    ? data.category_path.map((item) => item?.name).filter(Boolean)
+    : [];
+
+  return {
+    asin,
+    url: firstText(data.product_url, `https://www.amazon.com/dp/${asin}`),
+    title,
+    brand: brand.replace(/^Visit the\s+/i, "").replace(/\s+Store$/i, ""),
+    bullets,
+    details,
+    categoryHint: inferCategory(title, bullets, details),
+    mediaNote: [
+      photos.length ? `RapidAPI 已返回 ${photos.length} 张产品图链接，可用于检查主图、副图和信息图覆盖度。` : "",
+      categoryPath.length ? `Amazon 类目路径：${categoryPath.join(" > ")}。` : "",
+      data.product_description ? `产品描述已读取：${cleanText(data.product_description).slice(0, 240)}。` : "",
+      "A+ 图片内嵌文字和视频脚本仍建议人工复核。"
+    ].filter(Boolean).join("\n"),
+    warning: "数据来自 RapidAPI Real-Time Amazon Data；A+ 图片文字和视频脚本仍需人工复核。",
+    source: "rapidapi",
+    rawSummary: {
+      price: firstText(data.product_price),
+      rating: firstText(data.product_star_rating),
+      ratings: data.product_num_ratings || null,
+      photoCount: photos.length,
+      categoryPath
+    }
+  };
+}
+
+async function fetchRapidApiProductDetails(asin) {
+  const rapidApiKey = process.env.RAPIDAPI_KEY || process.env.RAPIDAPI_AMAZON_KEY;
+
+  if (!rapidApiKey) {
+    throw new AmazonReadError("RapidAPI key is not configured. Set RAPIDAPI_KEY in environment variables.", 500);
+  }
+
+  const url = new URL(`https://${RAPIDAPI_HOST}/product-details`);
+  url.searchParams.set("asin", asin);
+  url.searchParams.set("country", process.env.AMAZON_COUNTRY || "US");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "x-rapidapi-key": rapidApiKey,
+        "x-rapidapi-host": RAPIDAPI_HOST
+      }
+    });
+    const text = await response.text();
+    let payload;
+
+    try {
+      payload = text ? JSON.parse(text) : {};
+    } catch {
+      throw new AmazonReadError("RapidAPI returned a non-JSON response.", 502, url.toString());
+    }
+
+    if (!response.ok) {
+      const message = payload.message || payload.error || `RapidAPI returned HTTP ${response.status}.`;
+      throw new AmazonReadError(message, response.status === 401 || response.status === 403 ? 502 : response.status, url.toString());
+    }
+
+    return normalizeRapidApiListing(asin, payload);
+  } catch (error) {
+    if (error instanceof AmazonReadError) throw error;
+    const message = error.name === "AbortError" ? "RapidAPI request timed out." : `Could not connect to RapidAPI: ${error.message}`;
+    throw new AmazonReadError(message, 502, url.toString());
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchAmazonPage(asin) {
   const url = `https://www.amazon.com/dp/${asin}`;
   const controller = new AbortController();
@@ -169,6 +300,16 @@ async function readAmazonListing(inputAsin) {
 
   if (!ASIN_RE.test(asin)) {
     throw new AmazonReadError("ASIN must be 10 letters or digits.", 400);
+  }
+
+  if (process.env.RAPIDAPI_KEY || process.env.RAPIDAPI_AMAZON_KEY) {
+    const listing = await fetchRapidApiProductDetails(asin);
+
+    if (!listing.title && !listing.bullets.length && !Object.keys(listing.details).length) {
+      throw new AmazonReadError("RapidAPI returned data, but no title, bullets, or details were parsed.", 502, listing.url);
+    }
+
+    return listing;
   }
 
   let result;

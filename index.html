@@ -34,9 +34,9 @@
             <div class="inline-control">
               <input id="asin" name="asin" maxlength="10" autocomplete="off" placeholder="B0DQKPLXMB">
               <a class="icon-button" id="amazonLink" href="#" target="_blank" rel="noreferrer" title="打开 Amazon DP 页面" aria-label="打开 Amazon DP 页面">↗</a>
-              <button class="ghost-button compact fetch-button" type="button" id="fetchAmazon" title="读取 Amazon 页面信息">
+              <button class="ghost-button compact fetch-button" type="button" id="fetchAmazon" title="只读取 Amazon 页面信息">
                 <span aria-hidden="true">⌕</span>
-                读取
+                只读取
               </button>
             </div>
             <p class="helper-text" id="fetchHint">自动读取需要通过本地服务运行，直接打开 HTML 时请手动粘贴页面内容。</p>
@@ -81,16 +81,16 @@
 
           <div class="switch-row">
             <label class="switch">
-              <input type="checkbox" id="openAmazon" checked>
+              <input type="checkbox" id="openAmazon">
               <span></span>
             </label>
-            <span>审计时打开 Amazon 页面</span>
+            <span>审计后打开 Amazon 页面</span>
           </div>
 
           <div class="button-row">
             <button class="primary-button" type="submit">
               <span aria-hidden="true">✓</span>
-              生成审计建议
+              读取并审计
             </button>
             <button class="ghost-button" type="button" id="resetForm">
               <span aria-hidden="true">×</span>

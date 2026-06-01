@@ -239,11 +239,18 @@ function setFetchLoading(isLoading) {
   fetchAmazonButton.disabled = isLoading;
   fetchAmazonButton.innerHTML = isLoading
     ? '<span aria-hidden="true">…</span>读取中'
-    : '<span aria-hidden="true">⌕</span>读取';
+    : '<span aria-hidden="true">⌕</span>只读取';
 }
 
 function localizeFetchError(message) {
   if (/10 letters or digits/i.test(message)) return "ASIN 需要 10 位字母数字";
+  if (/RapidAPI key is not configured/i.test(message)) return "RapidAPI 密钥还没有配置到后端环境变量";
+  if (/RapidAPI returned a non-JSON response/i.test(message)) return "RapidAPI 返回了非 JSON 响应";
+  if (/RapidAPI returned data, but no title/i.test(message)) return "RapidAPI 返回了数据，但没有解析到标题、五点或参数";
+  if (/Could not connect to RapidAPI/i.test(message)) return "无法连接 RapidAPI";
+  if (/RapidAPI request timed out/i.test(message)) return "RapidAPI 请求超时";
+  if (/You are not subscribed|not subscribed/i.test(message)) return "RapidAPI 当前账号可能还没有订阅该 API";
+  if (/Invalid API key|invalid api key|unauthorized/i.test(message)) return "RapidAPI 密钥无效或未授权";
   if (/timed out/i.test(message)) return "Amazon 页面请求超时";
   if (/could not connect/i.test(message)) return "无法连接 Amazon 页面";
   if (/returned HTTP/i.test(message)) return "Amazon 返回错误状态，当前网络或站点策略未允许读取";
@@ -260,7 +267,8 @@ function formatDetails(details) {
     .join("\n");
 }
 
-async function fetchAmazonListing() {
+async function fetchAmazonListing(options = {}) {
+  const shouldOpenAmazon = options.openAmazon === true;
   const asin = sanitizeAsin(asinInput.value);
 
   if (!isValidAsin(asin)) {
@@ -314,12 +322,18 @@ async function fetchAmazonListing() {
 
     renderReport(getFormData());
 
+    if (shouldOpenAmazon) {
+      window.open(getAmazonUrl(asin), "_blank", "noreferrer");
+    }
+
     const warning = payload.warning ? ` ${payload.warning}` : "";
     fetchHint.textContent = `已读取 ${payload.url}。${warning}`;
     showToast("Amazon 信息已导入");
+    return true;
   } catch (error) {
     fetchHint.textContent = `${localizeFetchError(error.message)}。可打开 Amazon 链接后手动粘贴，或接入 Amazon SP-API / PA-API。`;
     showToast("自动读取失败");
+    return false;
   } finally {
     setFetchLoading(false);
   }
@@ -777,8 +791,11 @@ form.addEventListener("submit", (event) => {
     return;
   }
 
-  if (document.querySelector("#openAmazon").checked) {
-    window.open(getAmazonUrl(data.asin), "_blank", "noreferrer");
+  if (!isStaticOnlyHost()) {
+    fetchAmazonListing({
+      openAmazon: document.querySelector("#openAmazon").checked
+    });
+    return;
   }
 
   renderReport(data);

@@ -1,11 +1,32 @@
 const http = require("node:http");
 const fs = require("node:fs/promises");
+const fsSync = require("node:fs");
 const path = require("node:path");
 const { URL } = require("node:url");
 const { AmazonReadError, readAmazonListing } = require("./amazon-reader");
 
 const ROOT = __dirname;
 const PORT = Number(process.env.PORT || 8787);
+
+function loadLocalEnv() {
+  const envPath = path.join(ROOT, ".env");
+  if (!fsSync.existsSync(envPath)) return;
+
+  const lines = fsSync.readFileSync(envPath, "utf8").split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const separator = trimmed.indexOf("=");
+    if (separator < 1) continue;
+    const key = trimmed.slice(0, separator).trim();
+    const value = trimmed.slice(separator + 1).trim().replace(/^["']|["']$/g, "");
+    if (key && process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadLocalEnv();
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
